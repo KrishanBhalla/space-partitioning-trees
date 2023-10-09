@@ -3,9 +3,9 @@ package balltree
 import "github.com/KrishanBhalla/space-partitioning-trees/pkg/common"
 
 type BallTreeNode[T any] struct {
-	Point  common.Point
-	Data   T
-	Radius float64
+	Point  common.Point `json:"Point"`
+	Data   T            `json:"Data"`
+	Radius float64      `json:"Radius"`
 }
 
 var _node common.INode[float64] = BallTreeNode[float64]{}
