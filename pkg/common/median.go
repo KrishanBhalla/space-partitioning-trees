@@ -2,7 +2,7 @@ package common
 
 import "fmt"
 
-func FindMedianByOrdering[T any](ordering []float64, points []*PointWithData[T]) (*PointWithData[T], []*PointWithData[T], []*PointWithData[T], error) {
+func FindMedianByOrdering(ordering []float64, points []Point) (Point, []Point, []Point, error) {
 	if len(ordering) != len(points) {
 		return nil, nil, nil, fmt.Errorf("The ordering slice and points slice must have the same length")
 	}
@@ -16,7 +16,7 @@ func FindMedianByOrdering[T any](ordering []float64, points []*PointWithData[T])
 	return pivot, smaller, larger, nil
 }
 
-func quickSelect[T any](ordering []float64, points []*PointWithData[T], l, r, k int) (*PointWithData[T], []*PointWithData[T], []*PointWithData[T]) {
+func quickSelect(ordering []float64, points []Point, l, r, k int) (Point, []Point, []Point) {
 	if l == r { // If the list contains only one element,
 		return points[l], points[:l], points[l+1:] // return that element
 	}
@@ -31,7 +31,7 @@ func quickSelect[T any](ordering []float64, points []*PointWithData[T], l, r, k 
 	return quickSelect(ordering, points, l, pivotIndex-1, k)
 }
 
-func partition[T any](ordering []float64, points []*PointWithData[T], l, r int) int {
+func partition(ordering []float64, points []Point, l, r int) int {
 
 	x := ordering[r]
 	i := l
