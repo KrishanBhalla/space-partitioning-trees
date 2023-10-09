@@ -70,7 +70,7 @@ func (tree *KdTree) recursivelyConstruct(points []common.Point, ordinateIndex in
 
 func (tree KdTree) Search(point common.PointVector, distance float64) ([]common.Point, error) {
 	if len(point) != tree.Dimension {
-		return nil, fmt.Errorf("The query point has Dimension %d, but the nodes of the tree are of Dimension %d", len(point), tree.Dimension)
+		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", len(point), tree.Dimension)
 	}
 	queryStack := []*KdTree{}
 	result := []common.Point{}
