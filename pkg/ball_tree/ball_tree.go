@@ -9,19 +9,19 @@ import (
 )
 
 type BallTree[T any] struct {
-	root      *BallTreeNode[T]
-	left      *BallTree[T]
-	right     *BallTree[T]
-	dimension int
+	Root      *BallTreeNode[T] `json:"root"`
+	Left      *BallTree[T]     `json:"left"`
+	Right     *BallTree[T]     `json:"right"`
+	Dimension int              `json:"dimension"`
 }
 
 var _tree common.SpacePartitioningTree[float64, BallTreeNode[float64]] = BallTree[float64]{}
 
-func (tree BallTree[T]) Construct(points []*common.PointWithData[T], dimension int) error {
+func (tree BallTree[T]) Construct(points []*common.PointWithData[T], Dimension int) error {
 	points = common.Filter(points, func(p *common.PointWithData[T]) bool {
-		return len(p.Point) == dimension
+		return len(p.Point) == Dimension
 	})
-	tree.dimension = dimension
+	tree.Dimension = Dimension
 	err := tree.recursivelyConstruct(points)
 	if err != nil {
 		return err
@@ -41,14 +41,14 @@ func (tree *BallTree[T]) recursivelyConstruct(points []*common.PointWithData[T])
 	if err != nil {
 		return err
 	}
-	tree.root = &BallTreeNode[T]{point: pivot.Point, data: pivot.Data, Radius: radius}
+	tree.Root = &BallTreeNode[T]{Point: pivot.Point, Data: pivot.Data, Radius: radius}
 	if len(smaller) > 0 {
-		tree.left = &BallTree[T]{dimension: tree.dimension}
-		tree.left.recursivelyConstruct(smaller)
+		tree.Left = &BallTree[T]{Dimension: tree.Dimension}
+		tree.Left.recursivelyConstruct(smaller)
 	}
 	if len(larger) > 0 {
-		tree.right = &BallTree[T]{dimension: tree.dimension}
-		tree.right.recursivelyConstruct(larger)
+		tree.Right = &BallTree[T]{Dimension: tree.Dimension}
+		tree.Right.recursivelyConstruct(larger)
 	}
 	return nil
 }
@@ -89,8 +89,8 @@ func furthestPoint(r pointWithDistance, p common.Point) pointWithDistance {
 }
 
 func (tree BallTree[T]) Search(point common.Point, distance float64) ([]*BallTreeNode[T], error) {
-	if len(point) != tree.dimension {
-		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", len(point), tree.dimension)
+	if len(point) != tree.Dimension {
+		return nil, fmt.Errorf("The query point has Dimension %d, but the nodes of the tree are of Dimension %d", len(point), tree.Dimension)
 	}
 	queryStack := []*BallTree[T]{}
 	result := []*BallTreeNode[T]{}
@@ -98,22 +98,22 @@ func (tree BallTree[T]) Search(point common.Point, distance float64) ([]*BallTre
 	for currentNode != nil || len(queryStack) > 0 {
 		if currentNode != nil {
 			queryStack = append(queryStack, currentNode)
-			if currentNode.left != nil && currentNode.left.root.SearchChildren(point, distance) {
-				currentNode = currentNode.left
+			if currentNode.Left != nil && currentNode.Left.Root.SearchChildren(point, distance) {
+				currentNode = currentNode.Left
 			} else {
 				currentNode = nil
 			}
 		} else {
 			currentNode, queryStack = queryStack[len(queryStack)-1], queryStack[:len(queryStack)-1]
-			d, err := common.Distance(point, currentNode.root.point)
+			d, err := common.Distance(point, currentNode.Root.Point)
 			if err != nil {
 				return nil, err
 			}
 			if d < distance {
-				result = append(result, currentNode.root)
+				result = append(result, currentNode.Root)
 			}
-			if currentNode.right != nil && currentNode.right.root.SearchChildren(point, distance) {
-				currentNode = currentNode.right
+			if currentNode.Right != nil && currentNode.Right.Root.SearchChildren(point, distance) {
+				currentNode = currentNode.Right
 			} else {
 				currentNode = nil
 			}
@@ -126,32 +126,32 @@ func (tree BallTree[T]) Search(point common.Point, distance float64) ([]*BallTre
 // 	return nil, nil
 // }
 
-func (tree BallTree[T]) Dimension() int {
-	return tree.dimension
+func (tree BallTree[T]) NodeDimension() int {
+	return tree.Dimension
 }
 
 func (tree BallTree[T]) Size() int {
-	if tree.root == nil {
+	if tree.Root == nil {
 		return 0
-	} else if tree.left == nil && tree.right == nil {
+	} else if tree.Left == nil && tree.Right == nil {
 		return 1
-	} else if tree.left == nil {
-		return 1 + tree.right.Size()
-	} else if tree.right == nil {
-		return 1 + tree.left.Size()
+	} else if tree.Left == nil {
+		return 1 + tree.Right.Size()
+	} else if tree.Right == nil {
+		return 1 + tree.Left.Size()
 	}
-	return 1 + tree.left.Size() + tree.right.Size()
+	return 1 + tree.Left.Size() + tree.Right.Size()
 }
 
 func (tree BallTree[T]) Depth() int {
-	if tree.root == nil {
+	if tree.Root == nil {
 		return 0
-	} else if tree.left == nil && tree.right == nil {
+	} else if tree.Left == nil && tree.Right == nil {
 		return 1
-	} else if tree.left == nil {
-		return 1 + tree.right.Depth()
-	} else if tree.right == nil {
-		return 1 + tree.left.Depth()
+	} else if tree.Left == nil {
+		return 1 + tree.Right.Depth()
+	} else if tree.Right == nil {
+		return 1 + tree.Left.Depth()
 	}
-	return 1 + max(tree.left.Depth(), tree.right.Depth())
+	return 1 + max(tree.Left.Depth(), tree.Right.Depth())
 }

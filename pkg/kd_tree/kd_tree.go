@@ -7,38 +7,38 @@ import (
 )
 
 type KdTree[T any] struct {
-	root      *KdTreeNode[T]
-	left      *KdTree[T]
-	right     *KdTree[T]
-	dimension int
+	Root      *KdTreeNode[T] `json:"root"`
+	Left      *KdTree[T]     `json:"left"`
+	Right     *KdTree[T]     `json:"right"`
+	Dimension int            `json:"dimension"`
 }
 
 var _tree common.SpacePartitioningTree[float64, KdTreeNode[float64]] = KdTree[float64]{}
 
-func (tree KdTree[T]) Insert(point *common.PointWithData[T]) error {
-	for tree.root != nil {
-		if tree.left != nil && tree.root.SearchLeft(point.Point, 0) {
-			tree = *tree.left
-		} else if tree.right != nil && tree.root.SearchRight(point.Point, 0) {
-			tree = *tree.right
-		}
-	}
-	ordinateIndex := (tree.root.OrdinateIndex + 1) % tree.dimension
-	node := &KdTreeNode[T]{point: point.Point, data: point.Data, OrdinateIndex: ordinateIndex, SplittingValue: point.Point[ordinateIndex]}
-	newTree := &KdTree[T]{root: node, dimension: tree.dimension}
-	if tree.left == nil {
-		tree.left = newTree
-	} else if tree.right == nil {
-		tree.right = newTree
-	}
-	return nil
-}
+// func (tree KdTree[T]) Insert(point *common.PointWithData[T]) error {
+// 	for tree.Root != nil {
+// 		if tree.Left != nil && tree.Root.SearchLeft(point.Point, 0) {
+// 			tree = *tree.Left
+// 		} else if tree.Right != nil && tree.Root.SearchRight(point.Point, 0) {
+// 			tree = *tree.Right
+// 		}
+// 	}
+// 	ordinateIndex := (tree.Root.OrdinateIndex + 1) % tree.Dimension
+// 	node := &KdTreeNode[T]{point: point.Point, data: point.Data, OrdinateIndex: ordinateIndex, SplittingValue: point.Point[ordinateIndex]}
+// 	newTree := &KdTree[T]{Root: node, Dimension: tree.Dimension}
+// 	if tree.Left == nil {
+// 		tree.Left = newTree
+// 	} else if tree.Right == nil {
+// 		tree.Right = newTree
+// 	}
+// 	return nil
+// }
 
-func (tree KdTree[T]) Construct(points []*common.PointWithData[T], dimension int) error {
+func (tree KdTree[T]) Construct(points []*common.PointWithData[T], Dimension int) error {
 	points = common.Filter(points, func(p *common.PointWithData[T]) bool {
-		return len(p.Point) == dimension
+		return len(p.Point) == Dimension
 	})
-	tree.dimension = dimension
+	tree.Dimension = Dimension
 	ordinateIndex := 0
 	err := tree.recursivelyConstruct(points, ordinateIndex)
 	if err != nil {
@@ -56,21 +56,21 @@ func (tree *KdTree[T]) recursivelyConstruct(points []*common.PointWithData[T], o
 	if err != nil {
 		return err
 	}
-	tree.root = &KdTreeNode[T]{point: pivot.Point, data: pivot.Data, OrdinateIndex: ordinateIndex, SplittingValue: pivot.Point[ordinateIndex]}
+	tree.Root = &KdTreeNode[T]{Point: pivot.Point, Data: pivot.Data, OrdinateIndex: ordinateIndex, SplittingValue: pivot.Point[ordinateIndex]}
 	if len(smaller) > 0 {
-		tree.left = &KdTree[T]{dimension: tree.dimension}
-		tree.left.recursivelyConstruct(smaller, (ordinateIndex+1)%tree.dimension)
+		tree.Left = &KdTree[T]{Dimension: tree.Dimension}
+		tree.Left.recursivelyConstruct(smaller, (ordinateIndex+1)%tree.Dimension)
 	}
 	if len(larger) > 0 {
-		tree.right = &KdTree[T]{dimension: tree.dimension}
-		tree.right.recursivelyConstruct(larger, (ordinateIndex+1)%tree.dimension)
+		tree.Right = &KdTree[T]{Dimension: tree.Dimension}
+		tree.Right.recursivelyConstruct(larger, (ordinateIndex+1)%tree.Dimension)
 	}
 	return nil
 }
 
 func (tree KdTree[T]) Search(point common.Point, distance float64) ([]*KdTreeNode[T], error) {
-	if len(point) != tree.dimension {
-		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", len(point), tree.dimension)
+	if len(point) != tree.Dimension {
+		return nil, fmt.Errorf("The query point has Dimension %d, but the nodes of the tree are of Dimension %d", len(point), tree.Dimension)
 	}
 	queryStack := []*KdTree[T]{}
 	result := []*KdTreeNode[T]{}
@@ -78,22 +78,22 @@ func (tree KdTree[T]) Search(point common.Point, distance float64) ([]*KdTreeNod
 	for currentNode != nil || len(queryStack) > 0 {
 		if currentNode != nil {
 			queryStack = append(queryStack, currentNode)
-			if currentNode.left != nil && currentNode.root.SearchLeft(point, distance) {
-				currentNode = currentNode.left
+			if currentNode.Left != nil && currentNode.Root.SearchLeft(point, distance) {
+				currentNode = currentNode.Left
 			} else {
 				currentNode = nil
 			}
 		} else {
 			currentNode, queryStack = queryStack[len(queryStack)-1], queryStack[:len(queryStack)-1]
-			d, err := common.Distance(point, currentNode.root.point)
+			d, err := common.Distance(point, currentNode.Root.Point)
 			if err != nil {
 				return nil, err
 			}
 			if d < distance {
-				result = append(result, currentNode.root)
+				result = append(result, currentNode.Root)
 			}
-			if currentNode.root.SearchRight(point, distance) {
-				currentNode = currentNode.right
+			if currentNode.Root.SearchRight(point, distance) {
+				currentNode = currentNode.Right
 			} else {
 				currentNode = nil
 			}
@@ -106,32 +106,32 @@ func (tree KdTree[T]) Search(point common.Point, distance float64) ([]*KdTreeNod
 // 	return nil, nil
 // }
 
-func (tree KdTree[T]) Dimension() int {
-	return tree.dimension
+func (tree KdTree[T]) NodeDimension() int {
+	return tree.Dimension
 }
 
 func (tree KdTree[T]) Size() int {
-	if tree.root == nil {
+	if tree.Root == nil {
 		return 0
-	} else if tree.left == nil && tree.right == nil {
+	} else if tree.Left == nil && tree.Right == nil {
 		return 1
-	} else if tree.left == nil {
-		return 1 + tree.right.Size()
-	} else if tree.right == nil {
-		return 1 + tree.left.Size()
+	} else if tree.Left == nil {
+		return 1 + tree.Right.Size()
+	} else if tree.Right == nil {
+		return 1 + tree.Left.Size()
 	}
-	return 1 + tree.left.Size() + tree.right.Size()
+	return 1 + tree.Left.Size() + tree.Right.Size()
 }
 
 func (tree KdTree[T]) Depth() int {
-	if tree.root == nil {
+	if tree.Root == nil {
 		return 0
-	} else if tree.left == nil && tree.right == nil {
+	} else if tree.Left == nil && tree.Right == nil {
 		return 1
-	} else if tree.left == nil {
-		return 1 + tree.right.Depth()
-	} else if tree.right == nil {
-		return 1 + tree.left.Depth()
+	} else if tree.Left == nil {
+		return 1 + tree.Right.Depth()
+	} else if tree.Right == nil {
+		return 1 + tree.Left.Depth()
 	}
-	return 1 + max(tree.left.Depth(), tree.right.Depth())
+	return 1 + max(tree.Left.Depth(), tree.Right.Depth())
 }
