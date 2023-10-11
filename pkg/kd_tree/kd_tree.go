@@ -13,7 +13,7 @@ type KdTree struct {
 	Dimension int         `json:"dimension"`
 }
 
-var _tree common.SpacePartitioningTree = KdTree{}
+var _tree common.SpacePartitioningTree = &KdTree{}
 
 // func (tree KdTree) Insert(point *common.Point) error {
 // 	for tree.Root != nil {
@@ -34,7 +34,7 @@ var _tree common.SpacePartitioningTree = KdTree{}
 // 	return nil
 // }
 
-func (tree KdTree) Construct(points []common.Point, dimension int) error {
+func (tree *KdTree) Construct(points []common.Point, dimension int) error {
 	points = common.Filter(points, func(p common.Point) bool {
 		return p.Dimension() == dimension
 	})

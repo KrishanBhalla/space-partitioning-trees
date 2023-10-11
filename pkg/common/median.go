@@ -1,6 +1,10 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+	"math/rand"
+)
 
 func FindMedianByOrdering(ordering []float64, points []Point) (Point, []Point, []Point, error) {
 	if len(ordering) != len(points) {
@@ -33,11 +37,12 @@ func quickSelect(ordering []float64, points []Point, l, r, k int) (Point, []Poin
 
 func partition(ordering []float64, points []Point, l, r int) int {
 
-	x := ordering[r]
+	pivotIndex := int(math.Floor(rand.Float64()*(float64)(r-l))) + l
+	pivot := ordering[pivotIndex]
 	i := l
 	for j := l; j < r; j++ {
 
-		if ordering[j] <= x {
+		if ordering[j] <= pivot {
 			ordering[i], ordering[j] = ordering[j], ordering[i]
 			points[i], points[j] = points[j], points[i]
 			i++
