@@ -11,6 +11,9 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Memory/CPU profile binaries, built with `go test -cpuprofile=cpu.prof -memprofile=mem.prof`
+*.prof
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
