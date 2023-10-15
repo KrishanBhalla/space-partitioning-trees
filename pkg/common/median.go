@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 )
 
@@ -24,32 +23,40 @@ func quickSelect(ordering []float64, points []Point, l, r, k int) (Point, []Poin
 	if l == r { // If the list contains only one element,
 		return points[l], points[:l], points[l+1:] // return that element
 	}
-	pivotIndex := partition(ordering, points, l, r)
-	// The pivot is in its final sorted position
-	if pivotIndex == k {
-		return points[k], points[:k], points[k+1:]
+	var pivotIndex int
+	for l < r {
+
+		pivotIndex = rand.Intn(r+1-l) + l
+		pivotIndex = partition(ordering, points, l, r, pivotIndex)
+
+		if k < pivotIndex {
+			r = pivotIndex - 1
+		} else if k > pivotIndex {
+			l = pivotIndex + 1
+		} else {
+			break
+		}
 	}
-	if pivotIndex < k {
-		return quickSelect(ordering, points, pivotIndex+1, r, k)
-	}
-	return quickSelect(ordering, points, l, pivotIndex-1, k)
+	return points[k], points[:k], points[k+1:]
 }
 
-func partition(ordering []float64, points []Point, l, r int) int {
-
-	pivotIndex := int(math.Floor(rand.Float64()*(float64)(r-l))) + l
+func partition(ordering []float64, points []Point, l, r, pivotIndex int) int {
 	pivot := ordering[pivotIndex]
-	i := l
-	for j := l; j < r; j++ {
+	partitionIndex := l
 
-		if ordering[j] <= pivot {
-			ordering[i], ordering[j] = ordering[j], ordering[i]
-			points[i], points[j] = points[j], points[i]
-			i++
+	ordering[pivotIndex], ordering[r] = ordering[r], ordering[pivotIndex]
+	points[pivotIndex], points[r] = points[r], points[pivotIndex]
+
+	for i := l; i < r; i++ {
+
+		if ordering[i] <= pivot {
+			ordering[partitionIndex], ordering[i] = ordering[i], ordering[partitionIndex]
+			points[partitionIndex], points[i] = points[i], points[partitionIndex]
+			partitionIndex++
 		}
 	}
 
-	ordering[i], ordering[r] = ordering[r], ordering[i]
-	points[i], points[r] = points[r], points[i]
-	return i
+	ordering[partitionIndex], ordering[r] = ordering[r], ordering[partitionIndex]
+	points[partitionIndex], points[r] = points[r], points[partitionIndex]
+	return partitionIndex
 }

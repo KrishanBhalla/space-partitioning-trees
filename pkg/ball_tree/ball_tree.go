@@ -2,6 +2,7 @@ package balltree
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 
@@ -34,10 +35,7 @@ func (tree *BallTree) recursivelyConstruct(points []common.Point) error {
 		return nil
 	}
 	midPoint, orderingAxis := tree.bouncingBallAxis(points)
-	radius := common.Reduce[common.Point, float64](points, math.Inf(-1), func(r float64, p common.Point) float64 {
-		d, _ := common.Distance(p.Vector(), midPoint)
-		return math.Max(r, d)
-	})
+	radius := findRadiusOfBall(points, midPoint)
 	pivot, smaller, larger, err := common.FindMedianByOrdering(orderingAxis, points)
 	if err != nil {
 		return err
@@ -54,9 +52,11 @@ func (tree *BallTree) recursivelyConstruct(points []common.Point) error {
 	return nil
 }
 
-type pointWithDistance struct {
-	distance float64
-	point    common.PointVector
+func findRadiusOfBall(points []common.Point, midPoint common.PointVector) float64 {
+	return common.Reduce[common.Point, float64](points, math.Inf(-1), func(r float64, p common.Point) float64 {
+		d, _ := common.Distance(p.Vector(), midPoint)
+		return math.Max(r, d)
+	})
 }
 
 // Approximate axis of maximal variation
@@ -68,13 +68,10 @@ func (tree *BallTree) bouncingBallAxis(points []common.Point) (common.PointVecto
 	for i, p := range points {
 		vectors[i] = p.Vector()
 	}
-	start := vectors[rand.Int()%len(vectors)]
-	axisStart := common.Reduce(vectors, pointWithDistance{0, start}, furthestPoint).point
-	axisEnd := common.Reduce(vectors, pointWithDistance{0, axisStart}, furthestPoint).point
-	axis := make(common.PointVector, len(axisStart))
-	for i, v := range axisEnd {
-		axis[i] = v - axisStart[i]
-	}
+	start := vectors[rand.Intn(len(vectors))]
+	axisStart := furthestPoint(start, vectors)
+	axisEnd := furthestPoint(axisStart, vectors)
+	axis, _ := common.Difference(axisStart, axisEnd)
 
 	midPoint := make(common.PointVector, len(axisStart))
 	for i, v := range axisStart {
@@ -88,12 +85,20 @@ func (tree *BallTree) bouncingBallAxis(points []common.Point) (common.PointVecto
 	return midPoint, dotProduct
 }
 
-func furthestPoint(r pointWithDistance, p common.PointVector) pointWithDistance {
-	d, _ := common.Distance(p, r.point)
-	if d > r.distance {
-		return pointWithDistance{distance: d, point: p}
+func furthestPoint(startVec common.PointVector, vecs []common.PointVector) common.PointVector {
+	d := 0.
+	result := startVec
+	for _, v := range vecs {
+		new_d, err := common.Distance(v, startVec)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if new_d > d {
+			result = v
+			d = new_d
+		}
 	}
-	return r
+	return result
 }
 
 func (tree BallTree) Search(point common.PointVector, distance float64) ([]common.Point, error) {
