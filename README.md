@@ -1,3 +1,5 @@
+[https://goreportcard.com/badge/github.com/KrishanBhalla/space-partitioning-trees]
+
 # space-partitioning-trees
 Package providing implementations of space partitioning trees in Go (e.g. K-D trees and Ball trees)
 
