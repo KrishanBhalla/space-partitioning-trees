@@ -77,7 +77,21 @@ func TestCanSearchTree(t *testing.T) {
 	testPoint := createPoint(dimension, -100, 100)
 	tree := kdtree.KdTree{}
 	tree.Construct(points, dimension)
-	result, err := tree.Search(testPoint.Vector(), 500)
+	result, err := tree.Search(testPoint, 500)
 	assert.Nil(t, err, "No error should be returned")
-	assert.NotEmpty(t, nPoints, result, "Expecting a non empty search result")
+	assert.NotEmpty(t, result, "Expecting a non empty search result")
+}
+
+func TestCanSearchTreeForNearestNeighbours(t *testing.T) {
+	nPoints := 1000
+	dimension := 3
+	k := 5
+	points := createPoints(nPoints, dimension, -100, 100)
+	testPoint := createPoint(dimension, -100, 100)
+	tree := kdtree.KdTree{}
+	tree.Construct(points, dimension)
+	result, err := tree.KNearestNeighbors(testPoint, 5)
+	assert.Nil(t, err, "No error should be returned")
+	assert.NotEmpty(t, result, "Expecting a non empty KNN result")
+	assert.Len(t, result, k, "Expecting to return exactly k neighbours. Expected %d, recieved %d", k, len(result))
 }

@@ -2,6 +2,7 @@ package kdtree
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/KrishanBhalla/space-partitioning-trees/pkg/common"
 )
@@ -14,25 +15,6 @@ type KdTree struct {
 }
 
 var _tree common.SpacePartitioningTree = &KdTree{}
-
-// func (tree KdTree) Insert(point *common.Point) error {
-// 	for tree.Root != nil {
-// 		if tree.Left != nil && tree.Root.SearchLeft(point.Point, 0) {
-// 			tree = *tree.Left
-// 		} else if tree.Right != nil && tree.Root.SearchRight(point.Point, 0) {
-// 			tree = *tree.Right
-// 		}
-// 	}
-// 	ordinateIndex := (tree.Root.OrdinateIndex + 1) % tree.Dimension
-// 	node := &KdTreeNode{point: point.Point, data: point.Data, OrdinateIndex: ordinateIndex, SplittingValue: point.Point[ordinateIndex]}
-// 	newTree := &KdTree{Root: node, Dimension: tree.Dimension}
-// 	if tree.Left == nil {
-// 		tree.Left = newTree
-// 	} else if tree.Right == nil {
-// 		tree.Right = newTree
-// 	}
-// 	return nil
-// }
 
 func (tree *KdTree) Construct(points []common.Point, dimension int) error {
 	points = common.Filter(points, func(p common.Point) bool {
@@ -68,31 +50,32 @@ func (tree *KdTree) recursivelyConstruct(points []common.Point, ordinateIndex in
 	return nil
 }
 
-func (tree KdTree) Search(point common.PointVector, distance float64) ([]common.Point, error) {
-	if len(point) != tree.Dimension {
-		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", len(point), tree.Dimension)
+func (tree KdTree) Search(point common.Point, distance float64) ([]common.Point, error) {
+	if point.Dimension() != tree.Dimension {
+		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", point.Dimension(), tree.Dimension)
 	}
+	pointVector := point.Vector()
 	queryStack := []*KdTree{}
 	result := []common.Point{}
 	currentNode := &tree
 	for currentNode != nil || len(queryStack) > 0 {
 		if currentNode != nil {
 			queryStack = append(queryStack, currentNode)
-			if currentNode.Left != nil && currentNode.Root.SearchLeft(point, distance) {
+			if currentNode.Left != nil && currentNode.Root.SearchLeft(pointVector, distance) {
 				currentNode = currentNode.Left
 			} else {
 				currentNode = nil
 			}
 		} else {
 			currentNode, queryStack = queryStack[len(queryStack)-1], queryStack[:len(queryStack)-1]
-			d, err := common.Distance(point, currentNode.Root.Vector)
+			d, err := common.Distance(pointVector, currentNode.Root.Vector)
 			if err != nil {
 				return nil, err
 			}
 			if d < distance {
 				result = append(result, currentNode.Root.Data)
 			}
-			if currentNode.Root.SearchRight(point, distance) {
+			if currentNode.Root.SearchRight(pointVector, distance) {
 				currentNode = currentNode.Right
 			} else {
 				currentNode = nil
@@ -102,9 +85,55 @@ func (tree KdTree) Search(point common.PointVector, distance float64) ([]common.
 	return result, nil
 }
 
-// func (tree *KdTree) KNearestNeighbors(point common.Point, k int) ([]*KdTreeNode, error) {
-// 	return nil, nil
-// }
+func (tree KdTree) KNearestNeighbors(point common.Point, k int) ([]common.Point, error) {
+
+	if point.Dimension() != tree.Dimension {
+		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", point.Dimension(), tree.Dimension)
+	}
+	pointVector := point.Vector()
+	var candidateNeighbours []common.Point
+	var newNode *KdTree
+	currentNode := &tree
+	for currentNode != nil {
+		ordinateIndex := currentNode.Root.OrdinateIndex
+		split := currentNode.Root.SplittingValue
+		if pointVector[ordinateIndex] > split {
+			newNode = currentNode.Right
+		} else {
+			newNode = currentNode.Left
+		}
+		if newNode.Size() < k {
+			candidateNeighbours = currentNode.Points()
+			break
+		} else {
+			currentNode = newNode
+		}
+	}
+	distances := common.Map(candidateNeighbours, func(candidate common.Point) float64 {
+		d, _ := common.Distance(candidate.Vector(), pointVector)
+		return d
+	})
+	candidateDistance := common.Reduce(distances, 0., math.Max)
+
+	candidateNeighbours, err := tree.Search(point, candidateDistance)
+	if err != nil {
+		return nil, err
+	}
+	var candidatesWithDistances common.PointWithDistanceHeap
+	candidatesWithDistances = common.Map(candidateNeighbours, func(candidate common.Point) common.PointWithDistance {
+		d, _ := common.Distance(candidate.Vector(), pointVector)
+		return common.PointWithDistance{Point: candidate, Distance: d}
+	})
+
+	for len(candidatesWithDistances) > k {
+		candidatesWithDistances.Pop()
+	}
+
+	result := common.Map(candidatesWithDistances, func(c common.PointWithDistance) common.Point {
+		return c.Point
+	})
+	return result, nil
+}
 
 func (tree KdTree) NodeDimension() int {
 	return tree.Dimension
@@ -134,4 +163,18 @@ func (tree KdTree) Depth() int {
 		return 1 + tree.Left.Depth()
 	}
 	return 1 + max(tree.Left.Depth(), tree.Right.Depth())
+}
+
+func (tree KdTree) Points() []common.Point {
+	if tree.Root == nil {
+		return []common.Point{}
+	}
+	result := []common.Point{tree.Root.Data}
+	if tree.Left != nil {
+		result = append(tree.Left.Points(), result...)
+	}
+	if tree.Right != nil {
+		result = append(tree.Right.Points(), result...)
+	}
+	return result
 }

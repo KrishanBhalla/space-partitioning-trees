@@ -9,12 +9,13 @@ type Point interface {
 
 type SpacePartitioningTree interface {
 	// constructors
-	// Insert(point *PointWithData[T]) error
 	Construct(points []Point, dimension int) error
 	// accessors
-	Search(point PointVector, radius float64) ([]Point, error)
-	// KNearestNeighbors(point Point, k int) ([]Node[T], error)
+	Search(point Point, radius float64) ([]Point, error)
+	KNearestNeighbors(point Point, k int) ([]Point, error)
+	// Helpers
 	NodeDimension() int
 	Size() int
 	Depth() int
+	Points() []Point
 }

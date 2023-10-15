@@ -101,17 +101,18 @@ func furthestPoint(startVec common.PointVector, vecs []common.PointVector) commo
 	return result
 }
 
-func (tree BallTree) Search(point common.PointVector, distance float64) ([]common.Point, error) {
-	if len(point) != tree.Dimension {
-		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", len(point), tree.Dimension)
+func (tree BallTree) Search(point common.Point, distance float64) ([]common.Point, error) {
+	if point.Dimension() != tree.Dimension {
+		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", point.Dimension(), tree.Dimension)
 	}
 	queryStack := []*BallTree{}
 	result := []common.Point{}
+	pointVector := point.Vector()
 	currentNode := &tree
 	for currentNode != nil || len(queryStack) > 0 {
 		if currentNode != nil {
 			queryStack = append(queryStack, currentNode)
-			if currentNode.Left != nil && currentNode.Left.Root.SearchChildren(point, distance) {
+			if currentNode.Left != nil && currentNode.Left.Root.SearchChildren(pointVector, distance) {
 				currentNode = currentNode.Left
 			} else {
 				currentNode = nil
@@ -119,14 +120,14 @@ func (tree BallTree) Search(point common.PointVector, distance float64) ([]commo
 		} else {
 			currentNode, queryStack = queryStack[len(queryStack)-1], queryStack[:len(queryStack)-1]
 			// At this point you must use the vector associated with the data, not with the centroid of the ball
-			d, err := common.Distance(point, currentNode.Root.Data.Vector())
+			d, err := common.Distance(pointVector, currentNode.Root.Data.Vector())
 			if err != nil {
 				return nil, err
 			}
 			if d < distance {
 				result = append(result, currentNode.Root.Data)
 			}
-			if currentNode.Right != nil && currentNode.Right.Root.SearchChildren(point, distance) {
+			if currentNode.Right != nil && currentNode.Right.Root.SearchChildren(pointVector, distance) {
 				currentNode = currentNode.Right
 			} else {
 				currentNode = nil
@@ -136,9 +137,61 @@ func (tree BallTree) Search(point common.PointVector, distance float64) ([]commo
 	return result, nil
 }
 
-// func (tree *BallTree) KNearestNeighbors(point common.Point, k int) ([]*BallTreeNode, error) {
-// 	return nil, nil
-// }
+func (tree BallTree) KNearestNeighbors(point common.Point, k int) ([]common.Point, error) {
+
+	if point.Dimension() != tree.Dimension {
+		return nil, fmt.Errorf("The query point has dimension %d, but the nodes of the tree are of dimension %d", point.Dimension(), tree.Dimension)
+	}
+	pointVector := point.Vector()
+	var candidateNeighbours []common.Point
+	var newNode *BallTree
+	currentNode := &tree
+	for currentNode != nil {
+		leftDistance := math.Inf(1)
+		rightDistance := math.Inf(1)
+		if currentNode.Left != nil {
+			leftDistance, _ = common.Distance(currentNode.Left.Root.Centroid, pointVector)
+		}
+		if currentNode.Right != nil {
+			rightDistance, _ = common.Distance(currentNode.Right.Root.Centroid, pointVector)
+		}
+		if leftDistance < rightDistance {
+			newNode = currentNode.Left
+		} else {
+			newNode = currentNode.Right
+		}
+		if newNode.Size() < k {
+			candidateNeighbours = currentNode.Points()
+			break
+		} else {
+			currentNode = newNode
+		}
+	}
+	distances := common.Map(candidateNeighbours, func(candidate common.Point) float64 {
+		d, _ := common.Distance(candidate.Vector(), pointVector)
+		return d
+	})
+	candidateDistance := common.Reduce(distances, 0., math.Max)
+
+	candidateNeighbours, err := tree.Search(point, candidateDistance)
+	if err != nil {
+		return nil, err
+	}
+	var candidatesWithDistances common.PointWithDistanceHeap
+	candidatesWithDistances = common.Map(candidateNeighbours, func(candidate common.Point) common.PointWithDistance {
+		d, _ := common.Distance(candidate.Vector(), pointVector)
+		return common.PointWithDistance{Point: candidate, Distance: d}
+	})
+
+	for len(candidatesWithDistances) > k {
+		candidatesWithDistances.Pop()
+	}
+
+	result := common.Map(candidatesWithDistances, func(c common.PointWithDistance) common.Point {
+		return c.Point
+	})
+	return result, nil
+}
 
 func (tree BallTree) NodeDimension() int {
 	return tree.Dimension
@@ -168,4 +221,18 @@ func (tree BallTree) Depth() int {
 		return 1 + tree.Left.Depth()
 	}
 	return 1 + max(tree.Left.Depth(), tree.Right.Depth())
+}
+
+func (tree BallTree) Points() []common.Point {
+	if tree.Root == nil {
+		return []common.Point{}
+	}
+	result := []common.Point{tree.Root.Data}
+	if tree.Left != nil {
+		result = append(tree.Left.Points(), result...)
+	}
+	if tree.Right != nil {
+		result = append(tree.Right.Points(), result...)
+	}
+	return result
 }
